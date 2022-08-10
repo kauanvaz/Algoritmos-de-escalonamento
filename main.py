@@ -24,6 +24,10 @@ def organiza_processos():
 
 	return processos
 
+def calcula_tEspera(p, i):
+	if p.chegada >= i:
+		p.tEspera += 1
+
 processos = organiza_processos()
 
 temp = processos[0].chegada
@@ -35,8 +39,7 @@ tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necess
 quantum = 2
 exec = 0 # Unidades de tempo que um processo passa executando
 
-processos[p_atual].tRetorno = i+1 - processos[p_atual].chegada
-
+espera = []
 for i in range(tempo_total):
 	if processos[p_atual].duracao == 0:
 		if p_atual == len(processos)-1:
@@ -48,9 +51,16 @@ for i in range(tempo_total):
 	processos[p_atual].duracao -= 1
 	print("i: ", i, " atual: ", p_atual, " t: ",processos[p_atual].duracao)
 
+	processos[p_atual].tRetorno = i+1 - processos[p_atual].chegada
+
+	espera = list(map(lambda p: calcula_tEspera(p, i) if p is not processos[p_atual] and p.duracao != 0 else p.tEspera, processos))
+
 	exec += 1
 	if exec == quantum or processos[p_atual].duracao == 0: # Se o processo já executou por um quantum ou já terminou
 		if p_atual == len(processos)-1:
 			p_atual = 0
 		else: p_atual += 1
 		exec = 0
+
+print(list(map(lambda p: p.tRetorno, processos)))
+print(espera)
