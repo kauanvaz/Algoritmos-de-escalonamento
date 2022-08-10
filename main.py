@@ -26,22 +26,31 @@ def organiza_processos():
 
 processos = organiza_processos()
 
-#for p in processos:
-#	print(p.chegada)
+temp = processos[0].chegada
+for p in processos:
+	p.chegada -= temp
 
-tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Soma do tempo total necessario para todos os processos
+p_atual = 0 # Índice referente ao processo atualmente em análise
+tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necessario para execução de todos os processos
 quantum = 2
+exec = 0 # Unidades de tempo que um processo passa executando
 
-p_atual = 0 # Índice referente ao processo atual da lista de processos
-for i in range(2, tempo_total):
-	for p in range(p_atual, len(processos)):
-		if processos[p].duracao == 0: continue
-		if processos[p].duracao >= quantum: processos[p].duracao -= quantum
-		else: processos[p].duracao = 0
+processos[p_atual].tRetorno = i+1 - processos[p_atual].chegada
 
-		p_atual = p+1
-		
-		if p_atual == len(processos): p_atual = 0
+for i in range(tempo_total):
+	if processos[p_atual].duracao == 0:
+		if p_atual == len(processos)-1:
+			p_atual = 0
+		else:
+			while processos[p_atual].duracao == 0: # Passa os processos na lista que já terminaram a execução
+				p_atual += 1
+				
+	processos[p_atual].duracao -= 1
+	print("i: ", i, " atual: ", p_atual, " t: ",processos[p_atual].duracao)
 
-		print(processos[p].duracao)
-		break
+	exec += 1
+	if exec == quantum or processos[p_atual].duracao == 0: # Se o processo já executou por um quantum ou já terminou
+		if p_atual == len(processos)-1:
+			p_atual = 0
+		else: p_atual += 1
+		exec = 0
