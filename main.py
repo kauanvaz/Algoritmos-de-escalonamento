@@ -25,7 +25,7 @@ def organiza_processos():
 	return processos
 
 def calcula_tEspera(p, i):
-	if p.chegada >= i:
+	if p.chegada <= i:
 		p.tEspera += 1
 
 processos = organiza_processos()
@@ -38,8 +38,8 @@ p_atual = 0 # Índice referente ao processo atualmente em análise
 tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necessario para execução de todos os processos
 quantum = 2
 exec = 0 # Unidades de tempo que um processo passa executando
+aux_tResposta = [0]*len(processos)
 
-espera = []
 for i in range(tempo_total):
 	if processos[p_atual].duracao == 0:
 		if p_atual == len(processos)-1:
@@ -49,11 +49,16 @@ for i in range(tempo_total):
 				p_atual += 1
 				
 	processos[p_atual].duracao -= 1
-	print("i: ", i, " atual: ", p_atual, " t: ",processos[p_atual].duracao)
+	#print("i: ", i, " atual: ", p_atual, " t: ",processos[p_atual].duracao)
 
-	processos[p_atual].tRetorno = i+1 - processos[p_atual].chegada
+	processos[p_atual].tRetorno = i+1 - processos[p_atual].chegada # Cálculo do tempo de retorno
 
-	espera = list(map(lambda p: calcula_tEspera(p, i) if p is not processos[p_atual] and p.duracao != 0 else p.tEspera, processos))
+	if aux_tResposta[p_atual] == 0: # Cálculo do tempo de resposta
+		processos[p_atual].tResposta = i - processos[p_atual].chegada
+		aux_tResposta[p_atual] = 1
+
+	# Cálculo do tempo de espera
+	list(map(lambda p: calcula_tEspera(p, i) if p is not processos[p_atual] and p.duracao != 0 else p.tEspera, processos))
 
 	exec += 1
 	if exec == quantum or processos[p_atual].duracao == 0: # Se o processo já executou por um quantum ou já terminou
@@ -62,5 +67,9 @@ for i in range(tempo_total):
 		else: p_atual += 1
 		exec = 0
 
-print(list(map(lambda p: p.tRetorno, processos)))
-print(espera)
+numProcessos = len(processos)
+mRetorno = sum(list(map(lambda p: p.tRetorno, processos)))/numProcessos
+mResposta = sum(list(map(lambda p: p.tResposta, processos)))/numProcessos
+mEspera = sum(list(map(lambda p: p.tEspera, processos)))/numProcessos
+
+print(f"RR {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
