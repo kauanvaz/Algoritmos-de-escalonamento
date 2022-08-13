@@ -1,5 +1,6 @@
 import sys
 from copy import deepcopy
+from random import randint
 
 class Processo:
 	def __init__(self, tempoChegada, tempoDuracao):
@@ -8,11 +9,6 @@ class Processo:
 		self.tRetorno = 0
 		self.tResposta = 0
 		self.tEspera = 0
-    	#self.OrigArrival = self.Arrival
-    	#self.Response = 0
-    	#self.TotalResponse = 0
-    	#self.Wait = 0
-    	#self.TurnAround = 0
 
 def organiza_processos():
 	processos = []
@@ -52,7 +48,7 @@ numProcessos = len(processos)
 procPRI = deepcopy(processos)
 p_atual = 0
 chegadasPRI = list(map(lambda p: p.chegada, procPRI)) # Lista com os tempos de chegada de cada processo
-aux_tResposta = [0]*len(procPRI)
+aux_tResposta = [0]*numProcessos
 
 prioridades = define_prioridades(procPRI)
 #print(prioridades)
@@ -86,6 +82,40 @@ print(f"PRI {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
 
 del procPRI
 
+# ---------------------------------------------LOTERIA----------------------------------------------------
+
+procLOT = deepcopy(processos)
+aux_tResposta = [0]*numProcessos
+
+for i in range(tempo_total):
+	p_atual = randint(0, numProcessos-1)
+
+	while procLOT[p_atual].duracao == 0:
+		p_atual = randint(0, numProcessos-1)
+		#print(p_atual)
+
+	procLOT[p_atual].duracao -= 1
+	#print("i: ", i, " atual: ", p_atual, " t: ", procLOT[p_atual].duracao)
+
+	procLOT[p_atual].tRetorno = i+1 - procLOT[p_atual].chegada # Cálculo do tempo de retorno
+
+	if aux_tResposta[p_atual] == 0: # Cálculo do tempo de resposta
+		procLOT[p_atual].tResposta = i - procLOT[p_atual].chegada
+		aux_tResposta[p_atual] = 1
+
+	# Cálculo do tempo de espera
+	list(map(lambda p: calcula_tEspera(p, i) if p is not procLOT[p_atual] and p.duracao != 0 else p.tEspera, procLOT))
+
+	
+
+mRetorno = sum(list(map(lambda p: p.tRetorno, procLOT)))/numProcessos
+mResposta = sum(list(map(lambda p: p.tResposta, procLOT)))/numProcessos
+mEspera = sum(list(map(lambda p: p.tEspera, procLOT)))/numProcessos
+
+print(f"LOT {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
+
+del procLOT
+
 # --------------------------------------------ROUND ROBIN-------------------------------------------------
 # VERIFICAR DEPOIS PARA PROCESSOS QUE NÃO TEM INSTANTES DE CHEGADAS SEGUIDOS
 procRR = deepcopy(processos)
@@ -97,7 +127,7 @@ for p in procRR:
 p_atual = 0 # Índice referente ao processo atualmente em análise
 quantum = 2
 exec = 0 # Unidades de tempo que um processo passa executando
-aux_tResposta = [0]*len(procRR)
+aux_tResposta = [0]*numProcessos
 
 for i in range(tempo_total):
 	if procRR[p_atual].duracao == 0 or procRR[p_atual].chegada > i: # PROVAVELMENTE DÁ PRA MELHORAR (TALVEZ REMOVER) ESSE IF
@@ -108,7 +138,7 @@ for i in range(tempo_total):
 				p_atual += 1
 				
 	procRR[p_atual].duracao -= 1
-	#print("i: ", i, " atual: ", p_atual, " t: ",procRR[p_atual].duracao)
+	#print("i: ", i, " atual: ", p_atual, " t: ", procRR[p_atual].duracao)
 
 	procRR[p_atual].tRetorno = i+1 - procRR[p_atual].chegada # Cálculo do tempo de retorno
 
