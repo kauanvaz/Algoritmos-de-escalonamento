@@ -32,32 +32,54 @@ def define_prioridades(listaProcessos):
 		lista.append(len(listaProcessos)+1 - p.chegada)
 	return lista
 
-def atualiza_prioridadesPRI(lista, indice):
+def atualiza_prioridadesPRI(lista, indice, parada):
 	for index, value in enumerate(lista):
-		if lista[index] != -1:
+		if lista[index] != parada:
 			if index != indice:
 				lista[index] += 1
 			else:
 				lista[index] -= 1
 
 processos = organiza_processos()
-tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necessario para execução de todos os processos
 numProcessos = len(processos)
+#tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necessario para execução de todos os processos
+
+tempo_total = 0
+
+for index, processo in enumerate(processos):
+    if index == 0:
+        tempo_total = processo.duracao
+        continue
+
+    if processo.chegada > tempo_total: 
+        tempo_total += (processo.chegada - tempo_total) +  processo.duracao
+    else: 
+        tempo_total += processo.duracao
 
 # ---------------------------------------PRIORIDADES DINÂMICAS--------------------------------------------
 procPRI = deepcopy(processos)
+
+temp = procPRI[0].chegada
+for p in procPRI:
+	p.chegada -= temp
+
 p_atual = 0
 chegadasPRI = list(map(lambda p: p.chegada, procPRI)) # Lista com os tempos de chegada de cada processo
 aux_tResposta = [0]*numProcessos
 
 prioridades = define_prioridades(procPRI)
+ind_parada = min(prioridades)-1
+#print("PARADA -> ", ind_parada)
 #print(prioridades)
 for i in range(tempo_total):
 
 	maior = max(prioridades)
 	p_atual = prioridades.index(maior)
 
-	procPRI[p_atual].duracao -= 1
+	if i >= procPRI[p_atual].chegada:
+		procPRI[p_atual].duracao -= 1
+	else:
+		prioridades[p_atual] += 2
 
 	procPRI[p_atual].tRetorno = i+1 - procPRI[p_atual].chegada # Cálculo do tempo de retorno
 
@@ -69,9 +91,9 @@ for i in range(tempo_total):
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procPRI[p_atual] and p.duracao != 0 else p.tEspera, procPRI))
 
 	if procPRI[p_atual].duracao == 0:
-		prioridades[p_atual] = -1
+		prioridades[p_atual] = ind_parada
 
-	atualiza_prioridadesPRI(prioridades, p_atual)
+	atualiza_prioridadesPRI(prioridades, p_atual, ind_parada)
 	#print(prioridades)
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procPRI)))/numProcessos
@@ -85,6 +107,11 @@ del procPRI
 # ---------------------------------------------LOTERIA----------------------------------------------------
 
 procLOT = deepcopy(processos)
+
+temp = procLOT[0].chegada
+for p in procLOT:
+	p.chegada -= temp
+
 aux_tResposta = [0]*numProcessos
 
 for i in range(tempo_total):
@@ -117,7 +144,27 @@ print(f"LOT {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
 del procLOT
 
 # --------------------------------------------ROUND ROBIN-------------------------------------------------
-# VERIFICAR DEPOIS PARA PROCESSOS QUE NÃO TEM INSTANTES DE CHEGADAS SEGUIDOS
+def escolhe_elegivel_RR(procRR, p_atual, i):
+	ind_prox_proc = -1
+
+	inelegivel = True
+
+	cont = 1
+	while inelegivel: # Enquanto o processo atual for inelegível para ser processado
+		if cont == len(procRR)+1: # Caso todos tenham sido testados,
+			cont = 0			  # mas nenhum é elegível, então o processador está ocioso
+			ind_prox_proc = -1
+			break
+
+		p_atual = (p_atual + 1)%len(procRR) # De forma circular escolhe-se o próximo processo na lista
+		ind_prox_proc = p_atual
+
+		# Verificação se ainda é inelegível
+		inelegivel = procRR[p_atual].duracao == 0 or procRR[p_atual].chegada > i 
+		cont += 1
+
+	return ind_prox_proc
+
 procRR = deepcopy(processos)
 
 temp = procRR[0].chegada
@@ -127,16 +174,19 @@ for p in procRR:
 p_atual = 0 # Índice referente ao processo atualmente em análise
 quantum = 2
 exec = 0 # Unidades de tempo que um processo passa executando
-aux_tResposta = [0]*numProcessos
+aux_tResposta = [0]*numProcessos # Lista auxiliar que indica se o tempo de resposta
+								 # de um processo já foi calculado
 
 for i in range(tempo_total):
-	if procRR[p_atual].duracao == 0 or procRR[p_atual].chegada > i: # PROVAVELMENTE DÁ PRA MELHORAR (TALVEZ REMOVER) ESSE IF
-		if p_atual == len(procRR)-1:
-			p_atual = 0
-		else:
-			while procRR[p_atual].duracao == 0 or procRR[p_atual].chegada > i: # Passa os processos na lista que já terminaram a execução
-				p_atual += 1
-				
+	inelegivel = procRR[p_atual].duracao == 0 or procRR[p_atual].chegada > i
+	
+	if inelegivel: # Se o processo atual não atender aos requisitos de execução
+		p_atual = escolhe_elegivel_RR(procRR, p_atual, i) # Há a tentativa de outro ser escolhido
+		if p_atual == -1: # Se nenhum tiver sido escolhido
+			p_atual = 0 # Volta-se para o início da lista
+			continue    # E deixa-se o tempo "passar"
+
+	#print("ATUAL -> ", p_atual)
 	procRR[p_atual].duracao -= 1
 	#print("i: ", i, " atual: ", p_atual, " t: ", procRR[p_atual].duracao)
 
@@ -150,10 +200,9 @@ for i in range(tempo_total):
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procRR[p_atual] and p.duracao != 0 else p.tEspera, procRR))
 
 	exec += 1
-	if exec == quantum or procRR[p_atual].duracao == 0: # Se o processo já executou por um quantum ou já terminou
-		if p_atual == len(procRR)-1:
-			p_atual = 0
-		else: p_atual += 1
+	# Se o processo já executou por um quantum ou já terminou
+	if exec == quantum or procRR[p_atual].duracao == 0:
+		p_atual = (p_atual + 1)%len(procRR)
 		exec = 0
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procRR)))/numProcessos
