@@ -22,23 +22,8 @@ def organiza_processos():
 	return processos
 
 def calcula_tEspera(p, i):
-	if p.chegada <= i:
+	if p.chegada <= i: # Se o processo já chegou
 		p.tEspera += 1
-
-def define_prioridades(listaProcessos):
-	lista = []
-
-	for p in listaProcessos:
-		lista.append(len(listaProcessos)+1 - p.chegada)
-	return lista
-
-def atualiza_prioridadesPRI(lista, indice, parada):
-	for index, value in enumerate(lista):
-		if lista[index] != parada:
-			if index != indice:
-				lista[index] += 1
-			else:
-				lista[index] -= 1
 
 processos = organiza_processos()
 numProcessos = len(processos)
@@ -51,50 +36,97 @@ for index, processo in enumerate(processos):
         tempo_total = processo.duracao
         continue
 
-    if processo.chegada > tempo_total: 
-        tempo_total += (processo.chegada - tempo_total) +  processo.duracao
-    else: 
+	# Se o tempo de chegada de um processo for superior a soma dos tempos de execução
+	# dos processos que entraram no sistema até então, significa que o processador
+	# terá tempo ocioso que deve ser considerado no tempo total necessário para que
+	# todos os processos executem 
+    if processo.chegada > tempo_total:
+		# Incrementa-se ao tempo total o tempo de ociosidade + o tempo de duração do processo
+        tempo_total += (processo.chegada - tempo_total-1) +  processo.duracao
+    else:
         tempo_total += processo.duracao
 
 # ---------------------------------------PRIORIDADES DINÂMICAS--------------------------------------------
+def define_prioridades(listaProcessos):
+	lista = []
+
+	# A prioridade padrão é definida pela quantidade de processos + 1
+
+	# No entanto, a fim de obrigar que um processo só tenha uma prioridade
+	# suficientemente grande para ser escolhido apenas a partir do momento
+	# em que ele chegou no sistema, o valor padrão de prioridade dele é subtraído
+	# do seu tempo de chegada no sistema
+	for p in listaProcessos:
+		lista.append(len(listaProcessos)+1 - p.chegada)
+	return lista
+
+def atualiza_prioridadesPRI(lista, indice, parada):
+	for index, value in enumerate(lista):
+		if lista[index] != parada: # Se o processo ainda não tiver terminado sua execução
+			if index == indice:
+				# A prioridade do processo que acabou de executar é reduzida
+				lista[index] -= 1
+			else:
+				# As prioridades dos processos que não executaram são aumentadas
+				lista[index] += 1
+
 procPRI = deepcopy(processos)
 
+# Processo de remoção do "deslocamento" dos processos
 temp = procPRI[0].chegada
 for p in procPRI:
 	p.chegada -= temp
 
-p_atual = 0
-chegadasPRI = list(map(lambda p: p.chegada, procPRI)) # Lista com os tempos de chegada de cada processo
-aux_tResposta = [0]*numProcessos
+p_atual = 0 # índice do processo atual em análise
+aux_tResposta = [0]*numProcessos # Lista auxiliar que indica se o tempo de resposta
+								 # de um processo já foi calculado
 
 prioridades = define_prioridades(procPRI)
+
+# O número que indica que um processo já não deve mais ser processado é aquele
+# resultante da subtração do menor valor de prioridade gerado - 1
 ind_parada = min(prioridades)-1
-#print("PARADA -> ", ind_parada)
-#print(prioridades)
+
 for i in range(tempo_total):
 
-	maior = max(prioridades)
-	p_atual = prioridades.index(maior)
+	maior = max(prioridades) # Escolha da maior prioridade
+	p_atual = prioridades.index(maior) # Descoberta do índice do processo que possui maior prioridade
 
-	if i >= procPRI[p_atual].chegada:
+	if i >= procPRI[p_atual].chegada: # Se o processo escolhido já estiver no sistema
 		procPRI[p_atual].duracao -= 1
-	else:
-		prioridades[p_atual] += 2
+	else: # Se não estiver
+		prioridades[p_atual] += 1 # Incrementa-se a prioridade
+		continue # E deixa-se o tempo "passar"
 
-	procPRI[p_atual].tRetorno = i+1 - procPRI[p_atual].chegada # Cálculo do tempo de retorno
+	# CÁLCULO DO TEMPO DE RETORNO
+	# A cada iteração atualiza o valor do processo em execução.
+	# O último valor inserido será o correto.
+	procPRI[p_atual].tRetorno = i+1 - procPRI[p_atual].chegada
 
-	if aux_tResposta[p_atual] == 0: # Cálculo do tempo de resposta
+	# CÁLCULO DO TEMPO DE RESPOSTA
+	# O cálculo é feito logo que um processo começa a executar
+	# a lista aux_tResposta serve para indicar quando o cálculo
+	# já foi feito para um processo.
+	if aux_tResposta[p_atual] == 0:
 		procPRI[p_atual].tResposta = i - procPRI[p_atual].chegada
 		aux_tResposta[p_atual] = 1
 
-	# Cálculo do tempo de espera
+	# CÁLCULO DO TEMPO DE ESPERA
+	# A cada iteração os valores do tempo de espera de todos os
+	# processos são calculados. Para cada processo, verifica-se
+	# se não é o processo em execução e se ainda precisa ser
+	# executado para que então possa ser aplicada a função
+	# calcula_tEspera. Caso não passe nas verificações, nada é
+	# feito
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procPRI[p_atual] and p.duracao != 0 else p.tEspera, procPRI))
 
+	# Se o processo já terminou sua execução, um número de parada
+	# é atribuído a sua respectiva prioridade para que ele não
+	# seja mais considerado
 	if procPRI[p_atual].duracao == 0:
 		prioridades[p_atual] = ind_parada
 
 	atualiza_prioridadesPRI(prioridades, p_atual, ind_parada)
-	#print(prioridades)
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procPRI)))/numProcessos
 mResposta = sum(list(map(lambda p: p.tResposta, procPRI)))/numProcessos
@@ -102,12 +134,13 @@ mEspera = sum(list(map(lambda p: p.tEspera, procPRI)))/numProcessos
 
 print(f"PRI {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
 
-del procPRI
+del procPRI, prioridades, ind_parada
 
 # ---------------------------------------------LOTERIA----------------------------------------------------
 
 procLOT = deepcopy(processos)
 
+# Processo de remoção do "deslocamento" dos processos
 temp = procLOT[0].chegada
 for p in procLOT:
 	p.chegada -= temp
@@ -124,13 +157,26 @@ for i in range(tempo_total):
 	procLOT[p_atual].duracao -= 1
 	#print("i: ", i, " atual: ", p_atual, " t: ", procLOT[p_atual].duracao)
 
-	procLOT[p_atual].tRetorno = i+1 - procLOT[p_atual].chegada # Cálculo do tempo de retorno
+	# CÁLCULO DO TEMPO DE RETORNO
+	# A cada iteração atualiza o valor do processo em execução.
+	# O último valor inserido será o correto.
+	procLOT[p_atual].tRetorno = i+1 - procLOT[p_atual].chegada
 
-	if aux_tResposta[p_atual] == 0: # Cálculo do tempo de resposta
+	# CÁLCULO DO TEMPO DE RESPOSTA
+	# O cálculo é feito logo que um processo começa a executar
+	# a lista aux_tResposta serve para indicar quando o cálculo
+	# já foi feito para um processo.
+	if aux_tResposta[p_atual] == 0:
 		procLOT[p_atual].tResposta = i - procLOT[p_atual].chegada
 		aux_tResposta[p_atual] = 1
 
-	# Cálculo do tempo de espera
+	# CÁLCULO DO TEMPO DE ESPERA
+	# A cada iteração os valores do tempo de espera de todos os
+	# processos são calculados. Para cada processo, verifica-se
+	# se não é o processo em execução e se ainda precisa ser
+	# executado para que então possa ser aplicada a função
+	# calcula_tEspera. Caso não passe nas verificações, nada é
+	# feito
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procLOT[p_atual] and p.duracao != 0 else p.tEspera, procLOT))
 
 	
@@ -167,6 +213,7 @@ def escolhe_elegivel_RR(procRR, p_atual, i):
 
 procRR = deepcopy(processos)
 
+# Processo de remoção do "deslocamento" dos processos
 temp = procRR[0].chegada
 for p in procRR:
 	p.chegada -= temp
@@ -186,17 +233,28 @@ for i in range(tempo_total):
 			p_atual = 0 # Volta-se para o início da lista
 			continue    # E deixa-se o tempo "passar"
 
-	#print("ATUAL -> ", p_atual)
 	procRR[p_atual].duracao -= 1
-	#print("i: ", i, " atual: ", p_atual, " t: ", procRR[p_atual].duracao)
 
-	procRR[p_atual].tRetorno = i+1 - procRR[p_atual].chegada # Cálculo do tempo de retorno
+	# CÁLCULO DO TEMPO DE RETORNO
+	# A cada iteração atualiza o valor do processo em execução.
+	# O último valor inserido será o correto.
+	procRR[p_atual].tRetorno = i+1 - procRR[p_atual].chegada
 
-	if aux_tResposta[p_atual] == 0: # Cálculo do tempo de resposta
+	# CÁLCULO DO TEMPO DE RESPOSTA
+	# O cálculo é feito logo que um processo começa a executar
+	# a lista aux_tResposta serve para indicar quando o cálculo
+	# já foi feito para um processo.
+	if aux_tResposta[p_atual] == 0:
 		procRR[p_atual].tResposta = i - procRR[p_atual].chegada
 		aux_tResposta[p_atual] = 1
 
-	# Cálculo do tempo de espera
+	# CÁLCULO DO TEMPO DE ESPERA
+	# A cada iteração os valores do tempo de espera de todos os
+	# processos são calculados. Para cada processo, verifica-se
+	# se não é o processo em execução e se ainda precisa ser
+	# executado para que então possa ser aplicada a função
+	# calcula_tEspera. Caso não passe nas verificações, nada é
+	# feito
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procRR[p_atual] and p.duracao != 0 else p.tEspera, procRR))
 
 	exec += 1
@@ -211,4 +269,5 @@ mEspera = sum(list(map(lambda p: p.tEspera, procRR)))/numProcessos
 
 print(f"RR {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
 
-del procRR
+del procRR, temp, p_atual, quantum, exec, aux_tResposta, mRetorno, mResposta, mEspera
+del processos, numProcessos, tempo_total
