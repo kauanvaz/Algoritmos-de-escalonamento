@@ -142,7 +142,10 @@ def adiciona_elegiveis_LOT(proc, lista, tempo):
 	for index, processo in enumerate(proc): # ALTERAR PARA PROCURAR A PARTIR DO TEMPO EM ESPECÍFICO
 		if processo.chegada == tempo:
 			lista.append(index)
-			print("Adicionou", index)
+			#print("Adicionou", index)
+		#else: break
+
+	if len(lista) == 0: lista.append(-1)
 
 procLOT = deepcopy(processos)
 
@@ -153,16 +156,21 @@ for p in procLOT:
 
 aux_tResposta = [0]*numProcessos
 lista_ind_processos = []
-
+"""
 for i, p in enumerate(procLOT):
 	if p.chegada == 0: lista_ind_processos.append(i)
 	else: break
-
-print(lista_ind_processos)
+"""
 
 for i in range(tempo_total):
+	adiciona_elegiveis_LOT(procLOT, lista_ind_processos, i)
+	
 	p_atual = choice(lista_ind_processos)
-	print("Atual -> ", p_atual)
+	#print("Atual -> ", p_atual)
+
+	if p_atual == -1: # Se o processador está ocioso
+		lista_ind_processos.remove(-1)
+		continue # Deixa o "tempo passar"
 
 	procLOT[p_atual].duracao -= 1
 	#print("i: ", i, " atual: ", p_atual, " t: ", procLOT[p_atual].duracao)
@@ -170,7 +178,7 @@ for i in range(tempo_total):
 	# Remove o processo da lista de processos que podem ser escolhidos para serem processados
 	if procLOT[p_atual].duracao == 0:
 		lista_ind_processos.remove(p_atual)
-		print("Removeu", p_atual)
+		#print("Removeu", p_atual)
 
 	# CÁLCULO DO TEMPO DE RETORNO
 	# A cada iteração atualiza o valor do processo em execução.
@@ -193,8 +201,6 @@ for i in range(tempo_total):
 	# calcula_tEspera. Caso não passe nas verificações, nada é
 	# feito
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procLOT[p_atual] and p.duracao != 0 else p.tEspera, procLOT))
-
-	adiciona_elegiveis_LOT(procLOT, lista_ind_processos, i+1)
 	
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procLOT)))/numProcessos
