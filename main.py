@@ -1,6 +1,6 @@
 import sys
 from copy import deepcopy
-from random import randint
+from random import choice
 
 class Processo:
 	def __init__(self, tempoChegada, tempoDuracao):
@@ -138,6 +138,12 @@ del procPRI, prioridades, ind_parada
 
 # ---------------------------------------------LOTERIA----------------------------------------------------
 
+def adiciona_elegiveis_LOT(proc, lista, tempo):
+	for index, processo in enumerate(proc): # ALTERAR PARA PROCURAR A PARTIR DO TEMPO EM ESPECÍFICO
+		if processo.chegada == tempo:
+			lista.append(index)
+			print("Adicionou", index)
+
 procLOT = deepcopy(processos)
 
 # Processo de remoção do "deslocamento" dos processos
@@ -146,16 +152,25 @@ for p in procLOT:
 	p.chegada -= temp
 
 aux_tResposta = [0]*numProcessos
+lista_ind_processos = []
+
+for i, p in enumerate(procLOT):
+	if p.chegada == 0: lista_ind_processos.append(i)
+	else: break
+
+print(lista_ind_processos)
 
 for i in range(tempo_total):
-	p_atual = randint(0, numProcessos-1)
-
-	while procLOT[p_atual].duracao == 0:
-		p_atual = randint(0, numProcessos-1)
-		#print(p_atual)
+	p_atual = choice(lista_ind_processos)
+	print("Atual -> ", p_atual)
 
 	procLOT[p_atual].duracao -= 1
 	#print("i: ", i, " atual: ", p_atual, " t: ", procLOT[p_atual].duracao)
+
+	# Remove o processo da lista de processos que podem ser escolhidos para serem processados
+	if procLOT[p_atual].duracao == 0:
+		lista_ind_processos.remove(p_atual)
+		print("Removeu", p_atual)
 
 	# CÁLCULO DO TEMPO DE RETORNO
 	# A cada iteração atualiza o valor do processo em execução.
@@ -179,6 +194,7 @@ for i in range(tempo_total):
 	# feito
 	list(map(lambda p: calcula_tEspera(p, i) if p is not procLOT[p_atual] and p.duracao != 0 else p.tEspera, procLOT))
 
+	adiciona_elegiveis_LOT(procLOT, lista_ind_processos, i+1)
 	
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procLOT)))/numProcessos
@@ -190,6 +206,7 @@ print(f"LOT {mRetorno:.2f} {mResposta:.2f} {mEspera:.2f}")
 del procLOT
 
 # --------------------------------------------ROUND ROBIN-------------------------------------------------
+
 def escolhe_elegivel_RR(procRR, p_atual, i):
 	ind_prox_proc = -1
 
@@ -202,7 +219,7 @@ def escolhe_elegivel_RR(procRR, p_atual, i):
 			ind_prox_proc = -1
 			break
 
-		p_atual = (p_atual + 1)%len(procRR) # De forma circular escolhe-se o próximo processo na lista
+		p_atual = (p_atual + 1)%len(procRR) # De forma circular, escolhe-se o próximo processo na lista
 		ind_prox_proc = p_atual
 
 		# Verificação se ainda é inelegível
@@ -260,7 +277,7 @@ for i in range(tempo_total):
 	exec += 1
 	# Se o processo já executou por um quantum ou já terminou
 	if exec == quantum or procRR[p_atual].duracao == 0:
-		p_atual = (p_atual + 1)%len(procRR)
+		p_atual = (p_atual + 1)%len(procRR) # De forma circular, escolhe-se o próximo processo na lista
 		exec = 0
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procRR)))/numProcessos
