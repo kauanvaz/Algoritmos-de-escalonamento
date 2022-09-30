@@ -138,14 +138,16 @@ del procPRI, prioridades, ind_parada
 
 # ---------------------------------------------LOTERIA----------------------------------------------------
 
-def adiciona_elegiveis_LOT(proc, lista, tempo):
-	for index, processo in enumerate(proc): # ALTERAR PARA PROCURAR A PARTIR DO TEMPO EM ESPECÍFICO
-		if processo.chegada == tempo:
-			lista.append(index)
-			#print("Adicionou", index)
-		#else: break
+def adiciona_elegiveis_LOT(proc, lista, tempo, cont):
+	for i in range(cont, len(proc)):
+		if proc[i].chegada == tempo: # Se o processo chegou
+			lista.append(i) # Adiciona índice na lista de elegíveis para processamento
+			cont += 1 # Conta quantos processos já foram adicionados
+		else: break
 
-	if len(lista) == 0: lista.append(-1)
+	if len(lista) == 0: lista.append(-1) # Sinalização de que o processador está ocioso
+
+	return cont
 
 procLOT = deepcopy(processos)
 
@@ -154,31 +156,28 @@ temp = procLOT[0].chegada
 for p in procLOT:
 	p.chegada -= temp
 
-aux_tResposta = [0]*numProcessos
+aux_tResposta = [0]*numProcessos # Lista auxiliar que indica se o tempo de resposta
+								 # de um processo já foi calculado
 lista_ind_processos = []
-"""
-for i, p in enumerate(procLOT):
-	if p.chegada == 0: lista_ind_processos.append(i)
-	else: break
-"""
+conta_proc_add = 0 # Variável de auxílio para contabilizar quantos processos já entraram no sistema
 
 for i in range(tempo_total):
-	adiciona_elegiveis_LOT(procLOT, lista_ind_processos, i)
-	
+	# Atualiza lista de índices de processos elegíveis e retorna a quantidade de processos
+	# já adicionados ao sistema
+	conta_proc_add = adiciona_elegiveis_LOT(procLOT, lista_ind_processos, i, conta_proc_add)
+
+	# Escolha aleatória a partir de uma lista de índices de processos elegíveis
 	p_atual = choice(lista_ind_processos)
-	#print("Atual -> ", p_atual)
 
 	if p_atual == -1: # Se o processador está ocioso
 		lista_ind_processos.remove(-1)
 		continue # Deixa o "tempo passar"
 
 	procLOT[p_atual].duracao -= 1
-	#print("i: ", i, " atual: ", p_atual, " t: ", procLOT[p_atual].duracao)
 
 	# Remove o processo da lista de processos que podem ser escolhidos para serem processados
 	if procLOT[p_atual].duracao == 0:
 		lista_ind_processos.remove(p_atual)
-		#print("Removeu", p_atual)
 
 	# CÁLCULO DO TEMPO DE RETORNO
 	# A cada iteração atualiza o valor do processo em execução.
