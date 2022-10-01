@@ -25,6 +25,30 @@ def calcula_tEspera(p, i):
 	if p.chegada <= i: # Se o processo já chegou
 		p.tEspera += 1
 
+def calcula_tempos(procTipo, pAtual, i, list_aux_tResposta):
+	
+	# CÁLCULO DO TEMPO DE RETORNO
+	# A cada iteração atualiza o valor do processo em execução.
+	# O último valor inserido será o correto.
+	procTipo[pAtual].tRetorno = i+1 - procTipo[pAtual].chegada
+
+	# CÁLCULO DO TEMPO DE RESPOSTA
+	# O cálculo é feito logo que um processo começa a executar
+	# a lista aux_tResposta serve para indicar quando o cálculo
+	# já foi feito para um processo.
+	if list_aux_tResposta[pAtual] == 0:
+		procTipo[pAtual].tResposta = i - procTipo[pAtual].chegada
+		list_aux_tResposta[pAtual] = 1
+
+	# CÁLCULO DO TEMPO DE ESPERA
+	# A cada iteração os valores do tempo de espera de todos os
+	# processos são calculados. Para cada processo, verifica-se
+	# se não é o processo em execução e se ainda precisa ser
+	# executado para que então possa ser aplicada a função
+	# calcula_tEspera. Caso não passe nas verificações, nada é
+	# feito
+	list(map(lambda p: calcula_tEspera(p, i) if p is not procTipo[pAtual] and p.duracao != 0 else p.tEspera, procTipo))
+
 processos = organiza_processos()
 numProcessos = len(processos)
 #tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necessario para execução de todos os processos
@@ -98,28 +122,8 @@ for i in range(tempo_total):
 		prioridades[p_atual] += 1 # Incrementa-se a prioridade
 		continue # E deixa-se o tempo "passar"
 
-	# CÁLCULO DO TEMPO DE RETORNO
-	# A cada iteração atualiza o valor do processo em execução.
-	# O último valor inserido será o correto.
-	procPRI[p_atual].tRetorno = i+1 - procPRI[p_atual].chegada
-
-	# CÁLCULO DO TEMPO DE RESPOSTA
-	# O cálculo é feito logo que um processo começa a executar
-	# a lista aux_tResposta serve para indicar quando o cálculo
-	# já foi feito para um processo.
-	if aux_tResposta[p_atual] == 0:
-		procPRI[p_atual].tResposta = i - procPRI[p_atual].chegada
-		aux_tResposta[p_atual] = 1
-
-	# CÁLCULO DO TEMPO DE ESPERA
-	# A cada iteração os valores do tempo de espera de todos os
-	# processos são calculados. Para cada processo, verifica-se
-	# se não é o processo em execução e se ainda precisa ser
-	# executado para que então possa ser aplicada a função
-	# calcula_tEspera. Caso não passe nas verificações, nada é
-	# feito
-	list(map(lambda p: calcula_tEspera(p, i) if p is not procPRI[p_atual] and p.duracao != 0 else p.tEspera, procPRI))
-
+	calcula_tempos(procPRI, p_atual, i, aux_tResposta)
+	
 	# Se o processo já terminou sua execução, um número de parada
 	# é atribuído a sua respectiva prioridade para que ele não
 	# seja mais considerado
@@ -179,28 +183,7 @@ for i in range(tempo_total):
 	if procLOT[p_atual].duracao == 0:
 		lista_ind_processos.remove(p_atual)
 
-	# CÁLCULO DO TEMPO DE RETORNO
-	# A cada iteração atualiza o valor do processo em execução.
-	# O último valor inserido será o correto.
-	procLOT[p_atual].tRetorno = i+1 - procLOT[p_atual].chegada
-
-	# CÁLCULO DO TEMPO DE RESPOSTA
-	# O cálculo é feito logo que um processo começa a executar
-	# a lista aux_tResposta serve para indicar quando o cálculo
-	# já foi feito para um processo.
-	if aux_tResposta[p_atual] == 0:
-		procLOT[p_atual].tResposta = i - procLOT[p_atual].chegada
-		aux_tResposta[p_atual] = 1
-
-	# CÁLCULO DO TEMPO DE ESPERA
-	# A cada iteração os valores do tempo de espera de todos os
-	# processos são calculados. Para cada processo, verifica-se
-	# se não é o processo em execução e se ainda precisa ser
-	# executado para que então possa ser aplicada a função
-	# calcula_tEspera. Caso não passe nas verificações, nada é
-	# feito
-	list(map(lambda p: calcula_tEspera(p, i) if p is not procLOT[p_atual] and p.duracao != 0 else p.tEspera, procLOT))
-	
+	calcula_tempos(procLOT, p_atual, i, aux_tResposta)
 
 mRetorno = sum(list(map(lambda p: p.tRetorno, procLOT)))/numProcessos
 mResposta = sum(list(map(lambda p: p.tResposta, procLOT)))/numProcessos
@@ -257,27 +240,7 @@ for i in range(tempo_total):
 
 	procRR[p_atual].duracao -= 1
 
-	# CÁLCULO DO TEMPO DE RETORNO
-	# A cada iteração atualiza o valor do processo em execução.
-	# O último valor inserido será o correto.
-	procRR[p_atual].tRetorno = i+1 - procRR[p_atual].chegada
-
-	# CÁLCULO DO TEMPO DE RESPOSTA
-	# O cálculo é feito logo que um processo começa a executar
-	# a lista aux_tResposta serve para indicar quando o cálculo
-	# já foi feito para um processo.
-	if aux_tResposta[p_atual] == 0:
-		procRR[p_atual].tResposta = i - procRR[p_atual].chegada
-		aux_tResposta[p_atual] = 1
-
-	# CÁLCULO DO TEMPO DE ESPERA
-	# A cada iteração os valores do tempo de espera de todos os
-	# processos são calculados. Para cada processo, verifica-se
-	# se não é o processo em execução e se ainda precisa ser
-	# executado para que então possa ser aplicada a função
-	# calcula_tEspera. Caso não passe nas verificações, nada é
-	# feito
-	list(map(lambda p: calcula_tEspera(p, i) if p is not procRR[p_atual] and p.duracao != 0 else p.tEspera, procRR))
+	calcula_tempos(procRR, p_atual, i, aux_tResposta)
 
 	exec += 1
 	# Se o processo já executou por um quantum ou já terminou
