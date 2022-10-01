@@ -34,7 +34,7 @@ def calcula_tempos(procTipo, pAtual, i, list_aux_tResposta):
 
 	# CÁLCULO DO TEMPO DE RESPOSTA
 	# O cálculo é feito logo que um processo começa a executar
-	# a lista aux_tResposta serve para indicar quando o cálculo
+	# a lista auxiliar serve para indicar quando o cálculo
 	# já foi feito para um processo.
 	if list_aux_tResposta[pAtual] == 0:
 		procTipo[pAtual].tResposta = i - procTipo[pAtual].chegada
@@ -51,7 +51,6 @@ def calcula_tempos(procTipo, pAtual, i, list_aux_tResposta):
 
 processos = organiza_processos()
 numProcessos = len(processos)
-#tempo_total = sum(map(lambda p: int(p.duracao), processos)) # Tempo total necessario para execução de todos os processos
 
 tempo_total = 0
 
@@ -103,7 +102,7 @@ for p in procPRI:
 
 p_atual = 0 # índice do processo atual em análise
 aux_tResposta = [0]*numProcessos # Lista auxiliar que indica se o tempo de resposta
-								 # de um processo já foi calculado
+								 # de um processo já foi calculado ou não
 
 prioridades = define_prioridades(procPRI)
 
@@ -118,7 +117,7 @@ for i in range(tempo_total):
 
 	if i >= procPRI[p_atual].chegada: # Se o processo escolhido já estiver no sistema
 		procPRI[p_atual].duracao -= 1
-	else: # Se não estiver
+	else: # Só se chega nesse ponto em caso de ociosidade do processador
 		prioridades[p_atual] += 1 # Incrementa-se a prioridade
 		continue # E deixa-se o tempo "passar"
 
